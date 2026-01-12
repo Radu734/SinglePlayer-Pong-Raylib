@@ -12,7 +12,7 @@ I did it as to challange myself and get a breath of fresh air after too much mes
 
 ## 🎥 Demo
 
-[![Gameplay Demo](https://github.com/Radu734/SinglePlayer-Pong-Raylib/blob/main/Gameplay.gif)](https://github.com/Radu734/SinglePlayer-Pong-Raylib/blob/main/Gameplay.mp4)
+[![Gameplay Demo](https://github.com/Radu734/SinglePlayer-Pong-Raylib/blob/main/Resources/Gameplay.gif)](https://github.com/Radu734/SinglePlayer-Pong-Raylib/blob/main/Resouces/Gameplay.mp4)
 
 ---
 
@@ -59,9 +59,9 @@ All dynamic objects (Ball, Paddle, ScoreText) inherit from `GameObject`
 and implement their own `update()` and `draw()` logic.
 
 ### **Versor-Based Movement**
-Movement directions use a custom `Versor2f` type, giving:
-- simple directional intent  
-- normalized float vector logic  
+Movement directions use versors, thus allowing:
+- simple directional intent
+- normalized float vector logic
 - clean separation between "direction" and "speed"
 
 ### **Input System – Priority Logic**
@@ -102,21 +102,42 @@ A fully encapsulated audio subsystem:
 
 ### **Requirements**
 - Raylib 4.x (already linked at the location 'C:/raylib/raylib')
-- MinGW-w64 or equivalent compiler
+- MinGW-w64 or equivalent compiler (GCC/G++ 10+)
 - C++17
 
-### **Build using VSCode Task**
-Press:
-Ctrl + Shift + B
-Select: 
-Build Debug / Build Release
+### **Build using the provided Makefile**
+Open the **MSYS2 MinGW64 terminal** and navigate to the folder where the Makefile is present:
+
+```bash
+cd /d/SinglePlayer-Pong-Raylib/Pong
+```
+
+Then run: 
+
+```bash
+make
+```
+
+### **Build for Android**
+
+Navigate to the folder where the Makefile.Android is present
+
+```bash
+cd D:/SinglePlayer-Pong-Raylib/Pong
+```
+
+Then run:
+
+```bash
+make -f Makefile.Android
+```
 
 ### **Run**
 
-Either:
+After building, you can:
 
-- Use the `run` task from VSCode  
-- OR manually run:
+- Double click on the newly generated "main.exe" file  
+- OR run from terminal using:
 
 ```bash
 ./main.exe
@@ -164,5 +185,6 @@ This project is open-source under the MIT license.
 
 # 🙌 Credits
 
-Developed by Teodosiu Radu
-Built with C++17 and Raylib
+- Developed by Teodosiu Radu
+- Built with C++17 and Raylib
+- Special thanks to the **CoderDojo** team for inspiring this project and for reviewing my pull requests
