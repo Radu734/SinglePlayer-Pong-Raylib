@@ -36,10 +36,17 @@ struct AudioManager {
     static void loadSoundEffects() {
         hitSounds.resize(4); // 2 hit sounds + 2 scoring sounds
 
+        try {
+
         hitSounds[SoundEffectID::PlayerPaddleHit] = (LoadSound("resources/Player_Hit_Sound.mp3")); // PlayerPaddleHit
         hitSounds[SoundEffectID::AIPaddleHit]     = (LoadSound("resources/Enemy_Hit_Sound.mp3")); // AIPaddleHit
         hitSounds[SoundEffectID::ScorePoint]      = (LoadSound("resources/Scoring_Sound1.mp3")); // ScorePoint
         hitSounds[SoundEffectID::ScorePoint + 1]  = (LoadSound("resources/Scoring_Sound2.mp3")); // ScorePoint
+        
+        } catch (const std::exception& e) {
+            std::cerr << "Error loading sound effects: " << e.what() << "\n";
+            hitSounds.clear(); // don't accept half-loaded sound effects. If one fails, all fail. 
+        }
     }
 
     static void initializeBackgroundMusic() {
@@ -53,14 +60,21 @@ struct AudioManager {
     }
 
     static void unloadSound() {
+        if (hitSounds.empty()) return;
+
         for (auto& sound : hitSounds) {
-            UnloadSound(sound);
+            if (sound.stream.buffer != 0) { // check if sound was loaded
+                UnloadSound(sound);
+            }
         }
         hitSounds.clear();
-        UnloadMusicStream(backgroundMusic);
+        
+        if (backgroundMusic.stream.buffer != 0) { // check if music was loaded
+            UnloadMusicStream(backgroundMusic);
+        }
     }
 
-    void playSoundEffect(SoundEffectID id) {
+    static void playSoundEffect(SoundEffectID id) {
         if (id >= 0 && id < hitSounds.size()) {
             PlaySound(hitSounds[id]);
         }
@@ -72,9 +86,6 @@ private:
     static std::vector<Sound> hitSounds;
     static Music backgroundMusic;
 };
-
-std::vector<Sound> AudioManager::hitSounds;
-Music AudioManager::backgroundMusic;
 
 #pragma region OperatorOverloads
 /*Redability QOL improvements bc Raylib devs made the code in C with no operator overloads (¬_¬)*/
@@ -245,8 +256,8 @@ struct Game {
         resetHintText.centerHorizontally(screenWidth);
 
         InitAudioDevice();
-        audioManager.loadSoundEffects();
-        audioManager.initializeBackgroundMusic();
+        AudioManager::loadSoundEffects();
+        AudioManager::initializeBackgroundMusic();
     }
     
     void readInput() {
@@ -289,7 +300,7 @@ struct Game {
         speedRecordText.content = "Speed Record: " + std::to_string(getSpeedRecord());
         speedRecordText.centerHorizontally(screenWidth);
 
-        audioManager.updateMusicStream();
+        AudioManager::updateMusicStream();
     }
     
     void draw() {
@@ -311,7 +322,7 @@ struct Game {
     }
 
     ~Game() {
-        audioManager.unloadSound();
+        AudioManager::unloadSound();
         CloseAudioDevice();
     }
 
@@ -323,7 +334,6 @@ private:
     Text speedText;
     Text speedRecordText;
     Text resetHintText;
-    AudioManager audioManager;
 
     // priority for the newest press between the two keys
     int getCurrentVerticalKey() {
@@ -372,7 +382,7 @@ private:
             // increase speed exponentially based on current speed and angle
             ball.speed += 20.0f * (ball.speed / 400.0f) * std::fabs(ball.versor.y);
 
-            audioManager.playSoundEffect((&paddle == &leftPaddle) ? AudioManager::PlayerPaddleHit : AudioManager::AIPaddleHit);
+            AudioManager::playSoundEffect((&paddle == &leftPaddle) ? AudioManager::PlayerPaddleHit : AudioManager::AIPaddleHit);
         }
     }
     void handleWallBallCollision() {
@@ -384,12 +394,12 @@ private:
     void handlePointScoring() {
         if (ball.position.x + ball.radius >= screenWidth) {
             scoreText.incrementScore(1); // left player scores
-            audioManager.playSoundEffect(AudioManager::ScorePoint + GetRandomValue(0, 1));
+            AudioManager::playSoundEffect(AudioManager::ScorePoint + GetRandomValue(0, 1));
             resetRound();
         }
         else if (ball.position.x - ball.radius <= 0) {
             scoreText.incrementScore(0); // right player scores
-            audioManager.playSoundEffect(AudioManager::ScorePoint + GetRandomValue(0, 1));
+            AudioManager::playSoundEffect(AudioManager::ScorePoint + GetRandomValue(0, 1));
             resetRound();
         }
     }
@@ -467,7 +477,6 @@ int main()
 
     Game game;
 
-    SetConfigFlags(FLAG_WINDOW_RESIZABLE);
     InitWindow(screenWidth, screenHeight, "Pong Game - Raylib");
 
     Image icon = LoadImage("resources/icon.png");
@@ -482,6 +491,9 @@ int main()
         game.update(deltaTime);
         game.draw();
     }
+
+    CloseWindow();        // Close window and OpenGL context
+    UnloadImage(icon);
 
     return 0;
 }

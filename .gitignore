@@ -14,13 +14,14 @@
 # ========================
 # IDE / editor files
 # ========================
-.vscode/
+.vscode/*
 *.code-workspace
 *.suo
 *.user
 *.userosscache
 *.sln
 *.VC.db
+*.sh
 
 # ========================
 # OS files

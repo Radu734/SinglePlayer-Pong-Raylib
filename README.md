@@ -115,7 +115,7 @@ cd /d/SinglePlayer-Pong-Raylib/Pong
 Then run: 
 
 ```bash
-make
+mingw32-make
 ```
 
 ### **Build for Android**
@@ -129,7 +129,7 @@ cd D:/SinglePlayer-Pong-Raylib/Pong
 Then run:
 
 ```bash
-make -f Makefile.Android
+mingw32-make -f Makefile.Android
 ```
 
 ### **Run**
