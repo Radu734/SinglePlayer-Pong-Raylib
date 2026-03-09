@@ -28,6 +28,7 @@ constexpr int screenWidth  = 800;
 constexpr int screenHeight = 450;
 
 struct AudioManager {
+
     enum SoundEffectID {
         PlayerPaddleHit = 0,
         AIPaddleHit = 1,
@@ -83,9 +84,10 @@ struct AudioManager {
             std::cerr << "Sound effect ID out of range! ID: " << id << "\n";
         }
     }
+
 private:
-    static std::vector<Sound> hitSounds;
-    static Music backgroundMusic;
+    inline static std::vector<Sound> hitSounds;
+    inline static Music backgroundMusic;
 };
 
 #pragma region OperatorOverloads
@@ -94,7 +96,6 @@ inline AudioManager::SoundEffectID operator+(const AudioManager::SoundEffectID i
     return static_cast<AudioManager::SoundEffectID>(static_cast<int>(id) + offset);
 }
 
-/// @brief ///////////////////////////////////////////////////////////////////////////////////
 #pragma endregion
 
 struct GameObject {
@@ -183,14 +184,19 @@ struct ScoreText {
         DrawText(scoreText.c_str(), static_cast<int>(position.x - textWidth / 2.0f), static_cast<int>(position.y), fontSize, color);
     }
 
-    void incrementScore(bool isLeft = true) {
-        isLeft ? scoreLeft++ : scoreRight++;
+    void incrementScore(bool isRight = true) {
+        isRight ? scoreRight++ : scoreLeft++;
     }
 
     void resetScore() {
         scoreLeft = 0;
         scoreRight = 0;
     }
+
+    enum Player {
+        Left = 0,
+        Right = 1
+    };
 
 private:
     int scoreLeft = 0;
@@ -219,7 +225,7 @@ struct Text {
 #pragma region Game
 struct Game {
 
-    void init() {
+    Game() {
         // for initializing variables and game state
 
         const float paddleMovementSpeed = 300.0f;
@@ -238,7 +244,7 @@ struct Game {
 
         speedText = Text({ screenWidth / 2.0f, objectWallOffset }, "Speed:" + std::to_string(static_cast<int>(ball.speed)), textFontSize + 10, LIGHTGRAY);
         speedRecordText = Text({ screenWidth / 2.0f, objectWallOffset + textRowOffset }, "Speed Record: 0", textFontSize, LIGHTGRAY);
-        resetHintText = Text({ screenWidth / 2.0f, screenHeight - textRowOffset }, "Press 'R' to Restart the Game", textFontSize, LIGHTGRAY);
+        resetHintText = Text({ screenWidth / 2.0f, screenHeight - objectWallOffset }, "Press 'R' to Restart the Game", textFontSize, LIGHTGRAY);
         
         speedText.centerHorizontally(screenWidth);
         speedRecordText.centerHorizontally(screenWidth);
@@ -382,12 +388,12 @@ private:
     }
     void handlePointScoring() {
         if (ball.position.x + ball.radius >= screenWidth) {
-            scoreText.incrementScore(1); // left player scores
+            scoreText.incrementScore(scoreText.Player::Left); // left player scores
             AudioManager::playSoundEffect(AudioManager::ScorePoint + GetRandomValue(0, 1));
             resetRound();
         }
         else if (ball.position.x - ball.radius <= 0) {
-            scoreText.incrementScore(0); // right player scores
+            scoreText.incrementScore(scoreText.Player::Right); // right player scores
             AudioManager::playSoundEffect(AudioManager::ScorePoint + GetRandomValue(0, 1));
             resetRound();
         }
@@ -429,8 +435,8 @@ private:
 
         if (y_mod <= screenHeight)
             return y_mod;
-        else
-            return period - y_mod;
+
+        return period - y_mod;
     }
     float randomValidUnitVector() {
         float unitVector = GetRandomValue(-1000, 1000) / 1000.0f;
@@ -470,8 +476,6 @@ int main()
 
     Image icon = LoadImage("resources/icon.png");
     SetWindowIcon(icon);
-
-    game.init();
 
     while (!WindowShouldClose()) {
         float deltaTime = GetFrameTime();
