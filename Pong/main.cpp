@@ -18,6 +18,7 @@
 */
 
 #include "raylib.h"
+#include "raymath.h"
 #include <string>
 #include <cmath>
 #include <iostream>
@@ -88,54 +89,33 @@ private:
 };
 
 #pragma region OperatorOverloads
-/*Redability QOL improvements bc Raylib devs made the code in C with no operator overloads (¬_¬)*/
-inline Vector2 operator*(const Vector2& vec, const float& scalar) {
-    return {vec.x * scalar, vec.y * scalar};
-}
-
-inline Vector2& operator+=(Vector2& left, const Vector2& right) {
-    left.x += right.x;
-    left.y += right.y;
-    return left;
-}
-
-inline Vector2 operator-(const Vector2& vec1, const Vector2& vec2) {
-    return {vec1.x - vec2.x, vec1.y - vec2.y};
-}
-
-inline Vector2 operator/(const Vector2& vec, const float& scalar) {
-    return {vec.x / scalar, vec.y / scalar};
-}
-
-inline Vector2 operator+(const Vector2& vec1, const Vector2& vec2) {
-    return {vec1.x + vec2.x, vec1.y + vec2.y};
-}
 
 inline AudioManager::SoundEffectID operator+(const AudioManager::SoundEffectID id, const int offset) {
     return static_cast<AudioManager::SoundEffectID>(static_cast<int>(id) + offset);
 }
+
 /// @brief ///////////////////////////////////////////////////////////////////////////////////
 #pragma endregion
 
 struct GameObject {
     Vector2 position;
-    Vector2 versor;
+    Vector2 unitVector;
     float speed;
     Color color;
 
-    GameObject(Vector2 position = { 0.0, 0.0 }, Vector2 versor = { 0, 0 }, float speed = 0.0f, Color color = WHITE) 
-        : position(position), versor(versor), speed(speed), color(color) {}
+    GameObject(Vector2 position = { 0.0, 0.0 }, Vector2 unitVector = { 0, 0 }, float speed = 0.0f, Color color = WHITE) 
+        : position(position), unitVector(unitVector), speed(speed), color(color) {}
 
     virtual void update(float deltaTime) {
-        position += normaliseVersor(versor) * speed * deltaTime;
+        position += normaliseUnitVector(unitVector) * speed * deltaTime;
     }
     virtual void draw() = 0;
-    // target versors towards the given point
+    // target unitVectors towards the given point
     virtual void pointTowards(Vector2 target) final {
         Vector2 direction = target - position;
-        versor = normaliseVersor(direction);
+        unitVector = normaliseUnitVector(direction);
     }
-    const Vector2 normaliseVersor(Vector2 vec) const {
+    const Vector2 normaliseUnitVector(Vector2 vec) const {
         float len = std::sqrt(vec.x * vec.x + vec.y * vec.y);
 
         if (len == 0) return {0.0f, 0.0f};
@@ -147,8 +127,8 @@ struct GameObject {
 struct Paddle : GameObject {
     Vector2 size;
 
-    Paddle(Vector2 position = { 0.0, 0.0 }, Vector2 sz = { 10.0, 10.0 }, Vector2 versor = { 0, 0 }, float speed = 0.0f, Color color = WHITE) 
-    : GameObject(position, versor, speed, color), size(sz) {}
+    Paddle(Vector2 position = { 0.0, 0.0 }, Vector2 sz = { 10.0, 10.0 }, Vector2 unitVector = { 0, 0 }, float speed = 0.0f, Color color = WHITE) 
+    : GameObject(position, unitVector, speed, color), size(sz) {}
 
     void draw() override{
         DrawRectangleV(position, size, color);
@@ -163,7 +143,7 @@ struct Paddle : GameObject {
     }
 
     void update(float deltaTime) override {
-        Vector2 delta = normaliseVersor(versor) * speed * deltaTime;
+        Vector2 delta = normaliseUnitVector(unitVector) * speed * deltaTime;
 
         Vector2 newPosition = position + delta;
 
@@ -180,8 +160,8 @@ struct Paddle : GameObject {
 struct Ball : GameObject {
     float radius;
 
-    Ball(Vector2 position = { 0.0, 0.0 }, Vector2 versor = { 0, 0 }, float radius = 5.0f, float speed = 0.0f, Color color = WHITE) 
-        : GameObject(position, versor, speed, color), radius(radius) {}
+    Ball(Vector2 position = { 0.0, 0.0 }, Vector2 unitVector = { 0, 0 }, float radius = 5.0f, float speed = 0.0f, Color color = WHITE) 
+        : GameObject(position, unitVector, speed, color), radius(radius) {}
 
     void draw() override {
         DrawCircleV(position, radius, color);
@@ -242,14 +222,23 @@ struct Game {
     void init() {
         // for initializing variables and game state
 
-        leftPaddle = Paddle({ 50.0f, screenHeight / 2.0f - 50.0f }, { 10.0f, 100.0f }, { NONE, NONE}, 300.0f, WHITE);
-        rightPaddle = Paddle({ screenWidth - 50.0f, screenHeight / 2.0f - 50.0f }, { 10.0f, 100.0f }, { NONE, NONE }, 300.0f, WHITE);
-        ball = Ball({ screenWidth / 2.0f, screenHeight / 2.0f }, { RIGHT, randomValidVersor() }, 7.0f, 400.0f, WHITE);
+        const float paddleMovementSpeed = 300.0f;
+        const Vector2 paddleSize = { 10.0f, 100.0f };
+        const float halfPaddleHeight = paddleSize.y / 2.0f;
+        const float objectWallOffset = 50.0f;
+        const float ballInitialSpeed = 400.0f;
+        const float ballRadius = 7.0f;
+        const int textFontSize = 10;
+        const float textRowOffset = textFontSize + 20.0f;
+
+        leftPaddle = Paddle({ objectWallOffset, screenHeight / 2.0f - halfPaddleHeight }, paddleSize, { NONE, NONE }, paddleMovementSpeed, WHITE);
+        rightPaddle = Paddle({ screenWidth - objectWallOffset, screenHeight / 2.0f - halfPaddleHeight }, paddleSize, { NONE, NONE }, paddleMovementSpeed, WHITE);
+        ball = Ball({ screenWidth / 2.0f, screenHeight / 2.0f }, { RIGHT, randomValidUnitVector() }, ballRadius, ballInitialSpeed, WHITE);
         scoreText = ScoreText({ screenWidth / 2.0f, 20.0f }, 30, WHITE);
 
-        speedText = Text({ screenWidth / 2.0f, 50.0f }, "Speed:" + std::to_string(static_cast<int>(ball.speed)), 20, LIGHTGRAY);
-        speedRecordText = Text({ screenWidth / 2.0f, 80.0f }, "Speed Record: 0", 10, LIGHTGRAY);
-        resetHintText = Text({ screenWidth / 2.0f, screenHeight - 30.0f }, "Press 'R' to Restart the Game", 10, LIGHTGRAY);
+        speedText = Text({ screenWidth / 2.0f, objectWallOffset }, "Speed:" + std::to_string(static_cast<int>(ball.speed)), textFontSize + 10, LIGHTGRAY);
+        speedRecordText = Text({ screenWidth / 2.0f, objectWallOffset + textRowOffset }, "Speed Record: 0", textFontSize, LIGHTGRAY);
+        resetHintText = Text({ screenWidth / 2.0f, screenHeight - textRowOffset }, "Press 'R' to Restart the Game", textFontSize, LIGHTGRAY);
         
         speedText.centerHorizontally(screenWidth);
         speedRecordText.centerHorizontally(screenWidth);
@@ -266,13 +255,13 @@ struct Game {
         switch (getCurrentVerticalKey())   
         {
         case KEY_UP:
-            leftPaddle.versor.y = UP;
+            leftPaddle.unitVector.y = UP;
             break;
         case KEY_DOWN:
-            leftPaddle.versor.y = DOWN;
+            leftPaddle.unitVector.y = DOWN;
             break;
         default:
-            leftPaddle.versor = { NONE, NONE };
+            leftPaddle.unitVector = { NONE, NONE };
             break;
         }
 
@@ -358,7 +347,7 @@ private:
 
     void resetRound() {
         ball.position = { screenWidth / 2.0f, screenHeight / 2.0f };
-        ball.versor = { RIGHT, randomValidVersor() }; // send ball towards last scorer
+        ball.unitVector = { RIGHT, randomValidUnitVector() }; // send ball towards last scorer
         ball.speed = 400.0f;
         handleAIPaddleMovement(true); // reset AI prediction
     }
@@ -366,7 +355,7 @@ private:
         leftPaddle.position = { 50.0f, screenHeight / 2.0f - 50.0f };
         rightPaddle.position = { screenWidth - 50.0f, screenHeight / 2.0f - 50.0f };
         ball.position = { screenWidth / 2.0f, screenHeight / 2.0f };
-        ball.versor = { RIGHT, randomValidVersor() };
+        ball.unitVector = { RIGHT, randomValidUnitVector() };
         ball.speed = 400.0f;
         scoreText.resetScore();
         getSpeedRecord(true); // reset speed record
@@ -375,12 +364,12 @@ private:
     void handlePaddleBallCollision(Paddle& paddle) {
 
         if (CheckCollisionCircleRec(ball.position, ball.radius, paddle.toRectangle())) {
-            // versor y component is adjusted based on collision point
-            ball.versor.x *= -1;
+            // unitVector y component is adjusted based on collision point
+            ball.unitVector.x *= -1;
             Vector2 paddleCenter = paddle.getCenter();
-            ball.versor.y = (ball.position.y - paddleCenter.y) / (paddle.size.y / 2.0f);
+            ball.unitVector.y = (ball.position.y - paddleCenter.y) / (paddle.size.y / 2.0f);
             // increase speed exponentially based on current speed and angle
-            ball.speed += 20.0f * (ball.speed / 400.0f) * std::fabs(ball.versor.y);
+            ball.speed += 20.0f * (ball.speed / 400.0f) * std::fabs(ball.unitVector.y);
 
             AudioManager::playSoundEffect((&paddle == &leftPaddle) ? AudioManager::PlayerPaddleHit : AudioManager::AIPaddleHit);
         }
@@ -388,7 +377,7 @@ private:
     void handleWallBallCollision() {
         if (ball.position.y - ball.radius <= 0 || 
             ball.position.y + ball.radius >= screenHeight) {
-            ball.versor.y *= -1;
+            ball.unitVector.y *= -1;
         }
     }
     void handlePointScoring() {
@@ -409,27 +398,27 @@ private:
 
         if (resetFunction) {
             predictedY = predictBallY(rightPaddle.position.x + rightPaddle.size.x / 2.0f) - rightPaddle.size.y / 2.0f;
-            lastFrameBallDirX = ball.versor.x;
+            lastFrameBallDirX = ball.unitVector.x;
             return;
         }
 
-        if (lastFrameBallDirX == LEFT && ball.versor.x == RIGHT) {
+        if (lastFrameBallDirX == LEFT && ball.unitVector.x == RIGHT) {
             // ball changed direction towards AI paddle, make new prediction
             predictedY = predictBallY(rightPaddle.position.x + rightPaddle.size.x / 2.0f) - rightPaddle.size.y / 2.0f;
         }
 
-        if (ball.versor.x == LEFT) {
+        if (ball.unitVector.x == LEFT) {
             // return to center when ball is moving away
             rightPaddle.pointTowards({ rightPaddle.position.x, screenHeight / 2.0f - rightPaddle.size.y / 2.0f });
         }
         else rightPaddle.pointTowards({ rightPaddle.position.x, predictedY }); // aim towards predicted position
 
-        lastFrameBallDirX = (ball.versor.x != LEFT) ? RIGHT : LEFT;
+        lastFrameBallDirX = (ball.unitVector.x != LEFT) ? RIGHT : LEFT;
     }
     float predictBallY(float targetX) {
         // Step 1: raw straight-line intersection
         float dx = targetX - ball.position.x;
-        float dy = dx * (ball.versor.y / ball.versor.x);    // slope direction
+        float dy = dx * (ball.unitVector.y / ball.unitVector.x);    // slope direction
         float y_raw = ball.position.y + dy;
 
         // Step 2: triangle-wave reflection
@@ -443,10 +432,10 @@ private:
         else
             return period - y_mod;
     }
-    float randomValidVersor() {
-        float versor = GetRandomValue(-1000, 1000) / 1000.0f;
-        if (versor == 0) versor = -1; // prevent vertical only movement
-        return versor;
+    float randomValidUnitVector() {
+        float unitVector = GetRandomValue(-1000, 1000) / 1000.0f;
+        if (unitVector == 0) unitVector = -1; // prevent vertical only movement
+        return unitVector;
     }
     int getSpeedRecord(bool resetRecord = false) const {
         static int currentSpeedRecord = 0;
@@ -460,7 +449,7 @@ private:
         }
         return currentSpeedRecord;
     }
-    enum VersorDirection {
+    enum unitVectorDirection {
         UP = -1,
         DOWN = 1,
         LEFT = -1,
