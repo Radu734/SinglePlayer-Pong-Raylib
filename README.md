@@ -12,7 +12,7 @@ I did it as to challange myself and get a breath of fresh air after too much mes
 
 ## 🎥 Demo
 
-[![Gameplay Demo](https://github.com/Radu734/SinglePlayer-Pong-Raylib/blob/main/Resources/Gameplay.gif)](https://github.com/Radu734/SinglePlayer-Pong-Raylib/blob/main/Resouces/Gameplay.mp4)
+[![Gameplay Demo](https://github.com/Radu734/SinglePlayer-Pong-Raylib/blob/pong-v1/Resources/Gameplay.gif)](https://github.com/Radu734/SinglePlayer-Pong-Raylib/blob/pong-v1/Resources/Gameplay.mp4)
 
 ---
 
